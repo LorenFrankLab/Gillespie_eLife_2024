@@ -28,7 +28,7 @@ trials = loaddatastruct(destdir,animal,'trials');
 eeg = loadeegstruct(destdir,animal,'eeg',day,ep,tets);
 eegtimes = geteegtimes(eeg{day}{ep}{tets(1)});
 
-%% choose 5 random RW success trials
+%% PART 1: choose 5 random RW success trials
 % for saving, only do one trial at a time otherwise too big and exports as image
 plottet = 27;
 figure; set(gcf,'Position',[66 1 1855 1001])
@@ -63,7 +63,7 @@ for t = 1:length(trialinds)
 end
 
 
-%% plot traces for ripple detection schematic
+%% PART 2 plot traces for ripple detection schematic
 figure; set(gcf,'Position',[66 1 1855 1001])
 
 %select from complete trials with pre-rew delay 15s +/- 5s and only 1 trig event

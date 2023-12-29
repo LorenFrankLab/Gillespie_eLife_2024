@@ -20,7 +20,7 @@ f = runfilter(f);
 %waitcols = [148 148 148; 115 115 115; 82 82 82; 49 49 49]./255;
 %ctrlcols = [123 159 242; 66 89 195; 33 42 165; 6 1 140]./255;
 
-%% Plot fraction of RW events that are coherent(not fragmented), fracremote, rate & # of remote replay
+%% PART 1 Plot fraction of RW events that are coherent(not fragmented), fracremote, rate & # of remote replay
 clearvars -except f animals 
 animcol = [123 159 242; 66 89 195; 33 42 165; 6 1 140; 254 123 123; 255 82 82; 255 0 0; 168 1 0; 148 148 148; 115 115 115; 82 82 82; 49 49 49]./255;  %ctrlcols
 contentthresh = .3;
@@ -178,7 +178,7 @@ subplot(2,2,4); hold on;
 allrat_lmeplot(allripreplaycounts,allwaitreplaycounts,allriplabels,allwaitlabels,'spacer',[0 1],'grouped',1,'lme_dist','poisson')
 ylabel('Remote replay count');title('post-rew remote replay count'); ylim([0 10]);
 
-%% Plot fraction of RW+postrw combined events that are coherent(not fragmented), local, rate & # of remote replay
+%% PART 2 Plot fraction of RW+postrw combined events that are coherent(not fragmented), local, rate & # of remote replay
 clearvars -except f animals 
 animcol = [123 159 242; 66 89 195; 33 42 165; 6 1 140; 254 123 123; 255 82 82; 255 0 0; 168 1 0; 148 148 148; 115 115 115; 82 82 82; 49 49 49]./255;  %ctrlcols
 contentthresh = .3;
@@ -257,7 +257,7 @@ subplot(2,2,4); hold on;
 allrat_lmeplot(allripreplaycounts,allwaitreplaycounts,allriplabels,allwaitlabels,'spacer',[0 1],'grouped',1,'lme_dist','poisson')
 ylabel('Remote replay count');title('pre+post remote replay count');ylim([0 10]);% xlim([.5 9.5]); 
 
-%%  fit glm for arm categories, search+repeat combined, pre-reward
+%%  PART 3 fit glm for arm categories, search+repeat combined, pre-reward
 clearvars -except f animals animcol
 animcol = [123 159 242; 66 89 195; 33 42 165; 6 1 140; 254 123 123; 255 82 82; 255 0 0; 168 1 0; 148 148 148; 115 115 115; 82 82 82; 49 49 49]./255;  %ctrlcols
 contentthresh = .3;
@@ -329,7 +329,7 @@ end
 ylabel('exp(beta)'); set(gca,'XTick',length(animals)/2+[0:length(animals)+8:3*(length(animals)+8)],'XTickLabel',{'intrcpt','past','future','prevgoal'})
 plot([0 70],[1 1],'k:'); set(gca,'YScale','log'); ylim([.1 5]); xlim([0 70]);
 
-%%  fit glm for arm categories, search+repeat combined, pre- + post-reward combined
+%%  PART 4 fit glm for arm categories, search+repeat combined, pre- + post-reward combined
 clearvars -except f animals animcol
 animcol = [123 159 242; 66 89 195; 33 42 165; 6 1 140; 254 123 123; 255 82 82; 255 0 0; 168 1 0; 148 148 148; 115 115 115; 82 82 82; 49 49 49]./255;  %ctrlcols
 contentthresh = .3;

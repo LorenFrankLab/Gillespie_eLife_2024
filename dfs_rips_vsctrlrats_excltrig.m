@@ -24,55 +24,8 @@ load('/media/anna/whirlwindtemp2/ffresults/NFrips_vsctrlrats_excltrig.mat','f')
 
 animcol = [123 159 242; 66 89 195; 33 42 165; 6 1 140; 254 123 123; 255 82 82; 255 0 0; 168 1 0; 148 148 148; 115 115 115; 82 82 82; 49 49 49]./255;  %ctrlcols
 
-%% calculate online rip detection false pos/neg rates (epochwise) (manipulation cohort only)
-% only use the second half of trials from each epoch, when the
-% threshold has been fully raised
-clearvars -except f animals animcol
-%animcol = [ 254 123 123; 255 82 82; 255 0 0; 168 1 0]./255; 
-when = 1;
-f1=figure(); f2=figure(); f3=figure();
 
-for a = 5:length(animals) 
-    homedata = arrayfun(@(x) x.home',f(a).output{when},'UniformOutput',0); 
-    rwdata = arrayfun(@(x) x.rw',f(a).output{when},'UniformOutput',0); % stack data from all trialphases
-    postrwdata = arrayfun(@(x) x.postrw',f(a).output{when},'UniformOutput',0); % stack data from all trials
-    outerdata = arrayfun(@(x) x.outer',f(a).output{when},'UniformOutput',0); 
-    lockdata = arrayfun(@(x) x.lock',f(a).output{when},'UniformOutput',0); 
-    
-    %how many trigs didn't co-occur with an offline-detected rip?
-    trigs = arrayfun(@(x) x.removedrips,f(a).output{1},'UniformOutput',0);
-    trigs = cellfun(@(x) (x(x(:,2)>=ceil(max(x(:,2))/2),:)),trigs,'un',0);
-    fp{a} = cellfun(@(x) (sum(x(:,3)<=0)/size(x,1)),trigs);
-    
-    % how many rips of mean (min?) trig size or larger did not trigger? 
-    for e = 1:length(homedata)
-        mid = ceil(max(cellfun(@(x) (x.trialnum),homedata{e}))/2);
-        homesizes = cell2mat(cellfun(@(x) (x.size),homedata{e}(cellfun(@(x) (x.trialnum),homedata{e})>=mid),'un',0));
-        rwsizes = cell2mat(cellfun(@(x) (x.size),rwdata{e}(cellfun(@(x) (x.trialnum),rwdata{e})>=mid),'un',0));
-        postrwsizes = cell2mat(cellfun(@(x) (x.size),postrwdata{e}(cellfun(@(x) (x.trialnum),postrwdata{e})>=mid),'un',0));
-        outersizes = cell2mat(cellfun(@(x) (x.size),outerdata{e}(cellfun(@(x) (x.trialnum),outerdata{e})>=mid),'un',0));
-        locksizes = cell2mat(cellfun(@(x) (x.size),lockdata{e}(cellfun(@(x) (x.trialnum),lockdata{e})>=mid),'un',0));
-        allsizes = [homesizes;rwsizes;postrwsizes;outersizes;locksizes];
-        trigmin{a}(e) = min(trigs{e}(trigs{e}(:,3)>0,3));
-        %trigmin = prctile(trigs{e}(trigs{e}(:,3)>0,3),5);
-        fn{a}(e) = sum(allsizes>trigmin{a}(e))/(sum(allsizes>trigmin{a}(e))+size(trigs{e},1));
-    end
-    %alltrigs = vertcat(trigs{:});
-    figure(f1); hold on
-    %boxplot(alltrigs(alltrigs(:,3)>0,3),'Positions',a,'Width',.2,'Color',animcol(a,:))
-    boxplot(trigmin{a},'Positions',a-4,'Width',.2,'Color',animcol(a,:))
-    xlim([.5 4.5]); ylabel('size (offline sd)'); title('Trigger  min/ep, 2nd half of eps only'); ylim([0 35])
-
-    figure(f2); hold on 
-    boxplot(fp{a},'Positions',a-4,'Symbol','', 'Width',.2,'Color',animcol(a,:))
-    xlim([.5 4.5]); ylabel('Fraction'); title('False positives'); ylim([0 1])
-    figure(f3); hold on;
-    boxplot(fn{a},'Positions',a-4,'Symbol','', 'Width',.2,'Color',animcol(a,:))
-    xlim([.5 4.5]); ylabel('Fraction'); title('False negatives'); ylim([0 1])
-
-end
-
-%% plot median rate at rw, TRIALWISE comparison with lme
+%% PART 1 plot median rate at rw, TRIALWISE comparison with lme
 clearvars -except f animals
 animcol = [123 159 242; 66 89 195; 33 42 165; 6 1 140; 254 123 123; 255 82 82; 255 0 0; 168 1 0; 148 148 148; 115 115 115; 82 82 82; 49 49 49]./255;  %ctrlcols
 figure; set(gcf,'Position',[187 1 1374 973]); hold on;
@@ -100,7 +53,7 @@ end
 allrat_lmeplot(riprates,waitrates,labels_rip,labels_wait,'spacer',[1 20],'grouped',1)
 ylabel('SWR rate (Hz)');title('Riprate pre-reward, EXCLtrig, plateau');  ylim([0 2]);
 
-%% plot  SIZE & DURATION at rw, ripwise comparison with lme
+%% PART 2 plot  SIZE & DURATION at rw, ripwise comparison with lme
 clearvars -except f animals
 animcol = [123 159 242; 66 89 195; 33 42 165; 6 1 140; 254 123 123; 255 82 82; 255 0 0; 168 1 0; 148 148 148; 115 115 115; 82 82 82; 49 49 49]./255;  %ctrlcols
 for a = 1:length(animals)
@@ -133,7 +86,7 @@ ylabel('SWR size (Hz)');title('Ripsizes, pre-reward EXCLtrig,n=rips');  ylim([0 
 subplot(1,2,2); hold on; allrat_lmeplot(ripdurs,waitdurs,labels_rip,labels_wait,'spacer',[0 40],'grouped',1)
 ylabel('SWR duration (s)');title('Riplengths, pre-reward, EXCLtrig,n=rips'); ylim([0 .5]);
 
-%% plot latency to detection (manipulation cohort only)
+%% PART 3 plot latency to detection (manipulation cohort only)
 ratoffset = [75, 100, 50, 50]/1000;
 when = 1;
 f1=figure(); hold on
@@ -146,6 +99,44 @@ for a = 5:length(animals)
      text(a-4,0+a/20,sprintf('n=%dtrigs',length(latency{a})));
     xlim([.5 4.5]); ylabel('latency (s) '); title('Time btwn offline ripstart and sound/rew'); ylim([0 .5])
 end
+
+%% PART 4 plot rate binned by size prevalence plots (epochwise) - NF rats only
+clearvars -except f animals animcol 
+figure; set(gcf,'Position',[0 0 800 950])
+edges = [2:1:30];
+centers = edges(2:end)-.5;
+for a = 5:length(animals)
+    rwdata = arrayfun(@(x) x.rw,f(a).output{1},'UniformOutput',0); 
+    ratio{a} = zeros(length(rwdata),length(centers));
+    for e = 1:length(rwdata)  %generate 1 curve per ep
+        type = cellfun(@(x) x.type,rwdata{e});
+        ripsizes = cell2mat(cellfun(@(x) x.size',rwdata{e}(type==1),'un',0));
+        waitsizes = cell2mat(cellfun(@(x) x.size',rwdata{e}(type==2),'un',0));
+        ripduration = sum(cellfun(@(x) x.duration,rwdata{e}(type==1)));
+        waitduration = sum(cellfun(@(x) x.duration,rwdata{e}(type==2)));
+        ripprev{a}(e,:) = histcounts(ripsizes,edges)./ripduration;
+        waitprev{a}(e,:) = histcounts(waitsizes,edges)./waitduration;
+        ripvalbins{a}(e,:) = ripprev{a}(e,:)>0;
+        waitvalbins{a}(e,:) = waitprev{a}(e,:)>0;
+        bothvalbins{a}(e,:) = ripvalbins{a}(e,:) & waitvalbins{a}(e,:);
+        ratio{a}(e,find(bothvalbins{a}(e,:))) = ripprev{a}(e,find(bothvalbins{a}(e,:)))./waitprev{a}(e,find(bothvalbins{a}(e,:)));
+    end
+    subplot(3,2,a-4); hold on;
+    [valbins,means,sems] = binnedsemcurve(ripprev{a},ripvalbins{a},centers,5);
+    plot([centers(valbins);centers(valbins)],[means(valbins)-sems(valbins);means(valbins)+sems(valbins)],'Color',animcol(a,:),'Linewidth',.5);
+    plot(centers(valbins),means(valbins),'Color',animcol(a,:),'Linewidth',.5);
+    [valbins,means,sems] = binnedsemcurve(waitprev{a},waitvalbins{a},centers,5);
+    plot([centers(valbins);centers(valbins)],[means(valbins)-sems(valbins);means(valbins)+sems(valbins)],'Color',animcol(a+4,:),'Linewidth',.5);
+    plot(centers(valbins),means(valbins),'Color',animcol(a+4,:),'Linewidth',.5);
+    set(gca,'YScale','log'); ylim([.001 .2]); xlim([2 14]); title([animals{a} ' prevalence EXCL triggers']); ylabel('Rate (Hz)'); xlabel('Size (sd)');
+    subplot(3,2,5); hold on
+    [valbins,means,sems] = binnedsemcurve(ratio{a},bothvalbins{a},centers,5);
+    plot([centers(valbins);centers(valbins)],[means(valbins)-sems(valbins);means(valbins)+sems(valbins)],'Color',animcol(a,:),'Linewidth',.5);
+    plot(centers(valbins),means(valbins),'Color',animcol(a,:),'Linewidth',.5);
+    set(gca,'YScale','log'); ylim([.2 5]);xlim([2 14]); title('fold change R/W, EXCL triggers'); ylabel('Fold change'); xlabel('Size (sd)');
+    plot([2 14],[1 1],'k:')
+end
+
 
 
 %% rw+postrw riprate curves by timebin, centered at trig/rwend
@@ -204,43 +195,51 @@ for a = 1:length(animals)
     end
 end
 
-%% plot rate binned by size prevalence plots (epochwise) - NF rats only
-clearvars -except f animals animcol 
-figure; set(gcf,'Position',[0 0 800 950])
-edges = [2:1:30];
-centers = edges(2:end)-.5;
-for a = 5:length(animals)
-    rwdata = arrayfun(@(x) x.rw,f(a).output{1},'UniformOutput',0); 
-    ratio{a} = zeros(length(rwdata),length(centers));
-    for e = 1:length(rwdata)  %generate 1 curve per ep
-        type = cellfun(@(x) x.type,rwdata{e});
-        ripsizes = cell2mat(cellfun(@(x) x.size',rwdata{e}(type==1),'un',0));
-        waitsizes = cell2mat(cellfun(@(x) x.size',rwdata{e}(type==2),'un',0));
-        ripduration = sum(cellfun(@(x) x.duration,rwdata{e}(type==1)));
-        waitduration = sum(cellfun(@(x) x.duration,rwdata{e}(type==2)));
-        ripprev{a}(e,:) = histcounts(ripsizes,edges)./ripduration;
-        waitprev{a}(e,:) = histcounts(waitsizes,edges)./waitduration;
-        ripvalbins{a}(e,:) = ripprev{a}(e,:)>0;
-        waitvalbins{a}(e,:) = waitprev{a}(e,:)>0;
-        bothvalbins{a}(e,:) = ripvalbins{a}(e,:) & waitvalbins{a}(e,:);
-        ratio{a}(e,find(bothvalbins{a}(e,:))) = ripprev{a}(e,find(bothvalbins{a}(e,:)))./waitprev{a}(e,find(bothvalbins{a}(e,:)));
+%% calculate online rip detection false pos/neg rates (epochwise) (manipulation cohort only)
+% only use the second half of trials from each epoch, when the
+% threshold has been fully raised
+clearvars -except f animals animcol
+%animcol = [ 254 123 123; 255 82 82; 255 0 0; 168 1 0]./255; 
+when = 1;
+f1=figure(); f2=figure(); f3=figure();
+
+for a = 5:length(animals) 
+    homedata = arrayfun(@(x) x.home',f(a).output{when},'UniformOutput',0); 
+    rwdata = arrayfun(@(x) x.rw',f(a).output{when},'UniformOutput',0); % stack data from all trialphases
+    postrwdata = arrayfun(@(x) x.postrw',f(a).output{when},'UniformOutput',0); % stack data from all trials
+    outerdata = arrayfun(@(x) x.outer',f(a).output{when},'UniformOutput',0); 
+    lockdata = arrayfun(@(x) x.lock',f(a).output{when},'UniformOutput',0); 
+    
+    %how many trigs didn't co-occur with an offline-detected rip?
+    trigs = arrayfun(@(x) x.removedrips,f(a).output{1},'UniformOutput',0);
+    trigs = cellfun(@(x) (x(x(:,2)>=ceil(max(x(:,2))/2),:)),trigs,'un',0);
+    fp{a} = cellfun(@(x) (sum(x(:,3)<=0)/size(x,1)),trigs);
+    
+    % how many rips of mean (min?) trig size or larger did not trigger? 
+    for e = 1:length(homedata)
+        mid = ceil(max(cellfun(@(x) (x.trialnum),homedata{e}))/2);
+        homesizes = cell2mat(cellfun(@(x) (x.size),homedata{e}(cellfun(@(x) (x.trialnum),homedata{e})>=mid),'un',0));
+        rwsizes = cell2mat(cellfun(@(x) (x.size),rwdata{e}(cellfun(@(x) (x.trialnum),rwdata{e})>=mid),'un',0));
+        postrwsizes = cell2mat(cellfun(@(x) (x.size),postrwdata{e}(cellfun(@(x) (x.trialnum),postrwdata{e})>=mid),'un',0));
+        outersizes = cell2mat(cellfun(@(x) (x.size),outerdata{e}(cellfun(@(x) (x.trialnum),outerdata{e})>=mid),'un',0));
+        locksizes = cell2mat(cellfun(@(x) (x.size),lockdata{e}(cellfun(@(x) (x.trialnum),lockdata{e})>=mid),'un',0));
+        allsizes = [homesizes;rwsizes;postrwsizes;outersizes;locksizes];
+        trigmin{a}(e) = min(trigs{e}(trigs{e}(:,3)>0,3));
+        %trigmin = prctile(trigs{e}(trigs{e}(:,3)>0,3),5);
+        fn{a}(e) = sum(allsizes>trigmin{a}(e))/(sum(allsizes>trigmin{a}(e))+size(trigs{e},1));
     end
-    subplot(3,2,a-4); hold on;
-    [valbins,means,sems] = binnedsemcurve(ripprev{a},ripvalbins{a},centers,5);
-    plot([centers(valbins);centers(valbins)],[means(valbins)-sems(valbins);means(valbins)+sems(valbins)],'Color',animcol(a,:),'Linewidth',.5);
-    plot(centers(valbins),means(valbins),'Color',animcol(a,:),'Linewidth',.5);
-    [valbins,means,sems] = binnedsemcurve(waitprev{a},waitvalbins{a},centers,5);
-    plot([centers(valbins);centers(valbins)],[means(valbins)-sems(valbins);means(valbins)+sems(valbins)],'Color',animcol(a+4,:),'Linewidth',.5);
-    plot(centers(valbins),means(valbins),'Color',animcol(a+4,:),'Linewidth',.5);
-    set(gca,'YScale','log'); ylim([.001 .2]); xlim([2 14]); title([animals{a} ' prevalence EXCL triggers']); ylabel('Rate (Hz)'); xlabel('Size (sd)');
-    subplot(3,2,5); hold on
-    [valbins,means,sems] = binnedsemcurve(ratio{a},bothvalbins{a},centers,5);
-    plot([centers(valbins);centers(valbins)],[means(valbins)-sems(valbins);means(valbins)+sems(valbins)],'Color',animcol(a,:),'Linewidth',.5);
-    plot(centers(valbins),means(valbins),'Color',animcol(a,:),'Linewidth',.5);
-    set(gca,'YScale','log'); ylim([.2 5]);xlim([2 14]); title('fold change R/W, EXCL triggers'); ylabel('Fold change'); xlabel('Size (sd)');
-    plot([2 14],[1 1],'k:')
+    %alltrigs = vertcat(trigs{:});
+    figure(f1); hold on
+    %boxplot(alltrigs(alltrigs(:,3)>0,3),'Positions',a,'Width',.2,'Color',animcol(a,:))
+    boxplot(trigmin{a},'Positions',a-4,'Width',.2,'Color',animcol(a,:))
+    xlim([.5 4.5]); ylabel('size (offline sd)'); title('Trigger  min/ep, 2nd half of eps only'); ylim([0 35])
+
+    figure(f2); hold on 
+    boxplot(fp{a},'Positions',a-4,'Symbol','', 'Width',.2,'Color',animcol(a,:))
+    xlim([.5 4.5]); ylabel('Fraction'); title('False positives'); ylim([0 1])
+    figure(f3); hold on;
+    boxplot(fn{a},'Positions',a-4,'Symbol','', 'Width',.2,'Color',animcol(a,:))
+    xlim([.5 4.5]); ylabel('Fraction'); title('False negatives'); ylim([0 1])
+
 end
-
-
-
 

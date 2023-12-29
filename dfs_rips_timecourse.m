@@ -26,6 +26,36 @@ set(0,'defaultLineLineWidth',1)
 
 animcol = [27 92 41; 25 123 100; 33 159 169; 123 225 191; 83 69 172; 115 101 199; 150 139 222; 190 182 240]./255;  %ctrlcols
 
+
+%% PART 1 plot size of trigger rip (last event) over training
+
+clearvars -except f animals
+animcol = [254 123 123; 255 82 82; 255 0 0; 168 1 0; 148 148 148; 115 115 115; 82 82 82; 49 49 49]./255;  
+smoothingwin = 100;
+figure; hold on;
+for a = 1:4%length(animals)
+    rwdata = arrayfun(@(x) x.rw',f(a).output{1},'UniformOutput',0); % stack data from all trials
+    rwdata = rwdata(~cellfun(@isempty,rwdata));
+             %     % only use the second half of trials from each epoch
+rwdata = cellfun(@(x) x(ceil(length(x)/2):end),rwdata,'un',0);
+for e = 1:length(rwdata)
+        type = cellfun(@(x) x.type,rwdata{e});
+        norips = cellfun(@(x) isempty(x.size),rwdata{e});
+        trigsizes{a}{e} = cellfun(@(x) x.size(end),rwdata{e}(type==1 & ~norips));
+        meantrigsize{a}(e) = median(trigsizes{a}{e});
+end
+    subplot(1,2,1); hold on; plot(meantrigsize{a},'Color',animcol(a,:))
+    smoothedtrigsize = smooth(padarray(vertcat(trigsizes{a}{:}), smoothingwin, 'replicate'),smoothingwin);
+    subplot(1,2,2); hold on; plot(smoothedtrigsize,'Color',animcol(a,:)); 
+
+
+    %subplot(4,2,2*(a-1)+1); hold on; plot(vertcat(trigsizes{a}{:}),'.'); 
+    %plot(repmat(cumsum(cellfun(@length,trigsizes{a})),2,1),repmat([0;30],1,d),'k:'); ylabel({animals{a},'trig size'})
+end
+
+
+
+
 %% plot comb riprate per epoch for all animals
 clearvars -except f animals animcol
 figure
@@ -42,6 +72,48 @@ for a = 1:length(animals)
     plot(cellfun(@mean,combriprates{a}),'Color',animcol(a,:));
 end
 
+%% plot numrips, duration, rate per trial at each phase; 1 figure per animal; smoothed across trials, not by day BROKEN
+
+phases = {'home','rw','postrw','outer'}; %,'lock'
+smoothingwin = 200; % #trials
+kernel = repmat(1/smoothingwin,1,smoothingwin);
+figure; set(gcf,'Position',[0 0 900 950]);
+for a = 1:length(animals)
+    tde = arrayfun(@(x) x.index,f(a).output{1},'UniformOutput',0);% stack data from all trials
+    newtde = zeros(length(tde),2);
+    newtde(~cellfun(@isempty,tde),:) = vertcat(tde{:});
+        for p = 1:length(phases)
+        eval(['phasedata = arrayfun(@(x) x.' phases{p},''',f(a).output{1},''UniformOutput'',0);']);% stack data from all trials
+        phasedata = vertcat(phasedata{:});
+        type = cellfun(@(x) x.type,phasedata);
+        %type 1
+        nummean1 = filter(kernel, 1, cellfun(@(x) length(x.size),phasedata(type==1)));
+        durmean1 = filter(kernel, 1, cellfun(@(x) x.duration,phasedata(type==1)));
+        ratemean1 = filter(kernel, 1, cellfun(@(x) length(x.size),phasedata(type==1))./cellfun(@(x) x.duration,phasedata(type==1)));
+        subplot(5,3,1+3*(p-1)); hold on; h1 = plot(nummean1); title('numrips'); ylabel(phases{p});
+        subplot(5,3,2+3*(p-1)); hold on; h2 = plot(durmean1); title('duration'); 
+        subplot(5,3,3+3*(p-1)); hold on; h3 = plot(ratemean1); title('rate');
+        if p==2 | p==3
+            set([h1 h2 h3],'Color','g'); 
+        elseif p==4
+            set([h1 h2 h3],'Color','y'); 
+        end
+        %type 2
+        if any(type~=1) % if the classifier is relevant
+            nummean2 = filter(kernel, 1, cellfun(@(x) length(x.size),phasedata(type~=1)));
+            durmean2 = filter(kernel, 1, cellfun(@(x) x.duration,phasedata(type~=1)));
+            ratemean2 = filter(kernel, 1, cellfun(@(x) length(x.size),phasedata(type~=1))./cellfun(@(x) x.duration,phasedata(type~=1)));
+            subplot(5,3,1+3*(p-1)); hold on; h1 = plot(nummean2);
+            subplot(5,3,2+3*(p-1)); hold on; h2 = plot(durmean2);
+            subplot(5,3,3+3*(p-1)); hold on; h3 = plot(ratemean2);
+            if p==2 | p==3
+                set([h1 h2 h3],'Color','b');
+            elseif p==4
+                set([h1 h2 h3],'Color','k');
+            end
+        end
+        end
+    end
 
 %% plot numrips, duration, rate per trial at each phase per day; 1 figure per animal
 phases = {'home','rw','postrw','outer'}; %,'lock'
@@ -160,77 +232,4 @@ end
 subplot(3,1,1); plot([0 32],[1 1],':'); 
 subplot(3,1,2); plot([0 32],[1 1],':'); 
 subplot(3,1,3); plot([0 32],[1 1],':'); 
-
-%% plot size of trigger rip (last event) over training
-
-clearvars -except f animals
-animcol = [254 123 123; 255 82 82; 255 0 0; 168 1 0; 148 148 148; 115 115 115; 82 82 82; 49 49 49]./255;  
-smoothingwin = 100;
-figure; hold on;
-for a = 1:4%length(animals)
-    rwdata = arrayfun(@(x) x.rw',f(a).output{1},'UniformOutput',0); % stack data from all trials
-    rwdata = rwdata(~cellfun(@isempty,rwdata));
-             %     % only use the second half of trials from each epoch
-rwdata = cellfun(@(x) x(ceil(length(x)/2):end),rwdata,'un',0);
-for e = 1:length(rwdata)
-        type = cellfun(@(x) x.type,rwdata{e});
-        norips = cellfun(@(x) isempty(x.size),rwdata{e});
-        trigsizes{a}{e} = cellfun(@(x) x.size(end),rwdata{e}(type==1 & ~norips));
-        meantrigsize{a}(e) = median(trigsizes{a}{e});
-end
-    subplot(1,2,1); hold on; plot(meantrigsize{a},'Color',animcol(a,:))
-    smoothedtrigsize = smooth(padarray(vertcat(trigsizes{a}{:}), smoothingwin, 'replicate'),smoothingwin);
-    subplot(1,2,2); hold on; plot(smoothedtrigsize,'Color',animcol(a,:)); 
-
-
-    %subplot(4,2,2*(a-1)+1); hold on; plot(vertcat(trigsizes{a}{:}),'.'); 
-    %plot(repmat(cumsum(cellfun(@length,trigsizes{a})),2,1),repmat([0;30],1,d),'k:'); ylabel({animals{a},'trig size'})
-end
-
-%% plot performance over timecourse
-
-
-%% plot numrips, duration, rate per trial at each phase; 1 figure per animal; smoothed across trials, not by day BROKEN
-
-phases = {'home','rw','postrw','outer'}; %,'lock'
-smoothingwin = 200; % #trials
-kernel = repmat(1/smoothingwin,1,smoothingwin);
-figure; set(gcf,'Position',[0 0 900 950]);
-for a = 1:length(animals)
-    tde = arrayfun(@(x) x.index,f(a).output{1},'UniformOutput',0);% stack data from all trials
-    newtde = zeros(length(tde),2);
-    newtde(~cellfun(@isempty,tde),:) = vertcat(tde{:});
-        for p = 1:length(phases)
-        eval(['phasedata = arrayfun(@(x) x.' phases{p},''',f(a).output{1},''UniformOutput'',0);']);% stack data from all trials
-        phasedata = vertcat(phasedata{:});
-        type = cellfun(@(x) x.type,phasedata);
-        %type 1
-        nummean1 = filter(kernel, 1, cellfun(@(x) length(x.size),phasedata(type==1)));
-        durmean1 = filter(kernel, 1, cellfun(@(x) x.duration,phasedata(type==1)));
-        ratemean1 = filter(kernel, 1, cellfun(@(x) length(x.size),phasedata(type==1))./cellfun(@(x) x.duration,phasedata(type==1)));
-        subplot(5,3,1+3*(p-1)); hold on; h1 = plot(nummean1); title('numrips'); ylabel(phases{p});
-        subplot(5,3,2+3*(p-1)); hold on; h2 = plot(durmean1); title('duration'); 
-        subplot(5,3,3+3*(p-1)); hold on; h3 = plot(ratemean1); title('rate');
-        if p==2 | p==3
-            set([h1 h2 h3],'Color','g'); 
-        elseif p==4
-            set([h1 h2 h3],'Color','y'); 
-        end
-        %type 2
-        if any(type~=1) % if the classifier is relevant
-            nummean2 = filter(kernel, 1, cellfun(@(x) length(x.size),phasedata(type~=1)));
-            durmean2 = filter(kernel, 1, cellfun(@(x) x.duration,phasedata(type~=1)));
-            ratemean2 = filter(kernel, 1, cellfun(@(x) length(x.size),phasedata(type~=1))./cellfun(@(x) x.duration,phasedata(type~=1)));
-            subplot(5,3,1+3*(p-1)); hold on; h1 = plot(nummean2);
-            subplot(5,3,2+3*(p-1)); hold on; h2 = plot(durmean2);
-            subplot(5,3,3+3*(p-1)); hold on; h3 = plot(ratemean2);
-            if p==2 | p==3
-                set([h1 h2 h3],'Color','b');
-            elseif p==4
-                set([h1 h2 h3],'Color','k');
-            end
-        end
-        end
-    end
-
 

@@ -372,7 +372,7 @@ for b = 1:length(centers)-1
 %     imagesc('XData',timevec,'CData',grid{a})
 %     colormap(gca,cols)
 end
-%% PART 10 Assess change in meanvel, dwelltime, etc in Ctrl cohort over epochs 
+%% PART 10 Assess change in meanvel, dwelltime, etc in Ctrl cohort over epochs (& reviewer fig)
 clearvars -except f animals animcol
 figure;
     when=3;
@@ -383,7 +383,7 @@ figure;
         for e = 1:length(rwdata)
             rwriprate{a}(e) = mean(cellfun(@(x) length(x.size),rwdata{e})./cellfun(@(x) x.duration,rwdata{e}));
             rwriplength{a}(e) = mean(cell2mat(cellfun(@(x) x.riplengths',rwdata{e},'un',0)));
-            postrwriprate{a}(e) = mean(cellfun(@(x) length(x.size),postrwdata{e})./cellfun(@(x) x.duration,postrwdata{e}));
+            postrwriprate{a}(e) = nanmean(cellfun(@(x) length(x.size),postrwdata{e})./cellfun(@(x) x.duration,postrwdata{e}));
             postrwdur{a}(e) = mean(cellfun(@(x) x.duration,postrwdata{e}));
             meanvel{a}(e) = nanmean(cellfun(@(x) x.meanvel,rwdata{e}));
         end
@@ -396,6 +396,7 @@ figure;
         plot(postrwriprate{a},'.','Color',animcol(a,:)); lsline
         [r,p] = corrcoef(postrwriprate{a},[1:length(postrwriprate{a})]);
         text(2,a/10,sprintf('r2=%.03f,p=%.03f',r(2)^2,p(2)));
+        plot(postrwriprate{a},'-','Color',animcol(a,:));  ylim([0 1.5]); xlim([0 35]);
         title('riprate postreward'); ylabel('riprate (hz)'); xlabel('epochs')
         subplot(2,3,3); hold on;
         plot(postrwdur{a},'.','Color',animcol(a,:)); lsline
@@ -419,7 +420,7 @@ figure;
     
     
     
-%% plot difference bwtn  rate RW and POSTrw, TRIALWISE comparison with lme 
+%% PART 11  plot difference bwtn  rate RW and POSTrw, TRIALWISE comparison with lme 
 % reviewer request for interaction term; this is a different way of
 % comparing the two times (POST-PRE)
 clearvars -except f animals
@@ -433,7 +434,7 @@ for a = 1:length(animals)
         postrwdata = arrayfun(@(x) x.postrw,f(a).output{when},'UniformOutput',0); % stack data from all trials
         postrwdata = horzcat(postrwdata{:})';
         type = cellfun(@(x) x.type,rwdata);
-        riprates{a} = (cellfun(@(x) length(x.size),postrwdata(type==1))./cellfun(@(x) x.duration,postrwdata(type==1))) - (cellfun(@(x) length(x.size),rwdata(type==1))./cellfun(@(x) x.duration,rwdata(type==1)));
+        riprates{a} = (cellfun(@(x) length(x.size),postrwdata(type>=1))./cellfun(@(x) x.duration,postrwdata(type>=1))) - (cellfun(@(x) length(x.size),rwdata(type>=1))./cellfun(@(x) x.duration,rwdata(type>=1)));
         waitrates{a} = riprates{a};
         labels_rip{a} = [zeros(length(riprates{a}),1),a+zeros(length(riprates{a}),1)];
         labels_wait{a} = labels_rip{a};

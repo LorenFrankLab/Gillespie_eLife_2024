@@ -1,5 +1,5 @@
 %% Neurofeedback: main ripple quantifications; timecourse
-% not currently used 
+% 
 animals = {'remy','gus','bernard','fievel','jaq','roquefort','despereaux','montague'}; %,'gerald'};
 
 epochfilter{1} = [' $ripthresh>=0 & (isequal($environment,''goal'') | isequal($environment,''hybrid2'') | isequal($environment,''hybrid3'')) '];
@@ -54,7 +54,41 @@ end
 end
 
 
-
+%% PART 2 plot median rate & count at POSTrw, TRIALWISE comparison with lme
+clearvars -except f animals
+animcol = [123 159 242; 66 89 195; 33 42 165; 6 1 140; 254 123 123; 255 82 82; 255 0 0; 168 1 0; 148 148 148; 115 115 115; 82 82 82; 49 49 49]./255;  %ctrlcols
+for a = 1:length(animals)
+    if a>4
+        rwdata = arrayfun(@(x) x.postrw,f(a).output{1},'UniformOutput',0); % stack data from all trials
+        rwdata = horzcat(rwdata{:})'; %all trials in this stage
+        rwdata = rwdata(1:250);
+        type = cellfun(@(x) x.type,rwdata);
+        riprates{a} = cellfun(@(x) length(x.size),rwdata(type>=1))./cellfun(@(x) x.duration,rwdata(type>=1));
+        labels_rip{a} = [zeros(length(riprates{a}),1),a+zeros(length(riprates{a}),1)];
+    else
+        rwdata = arrayfun(@(x) x.postrw,f(a).output{1},'UniformOutput',0); % stack data from all trials
+        rwdata = horzcat(rwdata{:})'; %all trials in this stage
+        rwdata = rwdata(1:250);
+        type = cellfun(@(x) x.type,rwdata);
+        riprates{a} = cellfun(@(x) length(x.size),rwdata(type>=1))./cellfun(@(x) x.duration,rwdata(type>=1));
+        labels_rip{a} = [ones(length(riprates{a}),1),a+zeros(length(riprates{a}),1)];
+    end
+    
+end
+figure; hold on;
+animcol = [ 254 123 123; 255 82 82; 255 0 0; 168 1 0;123 159 242; 66 89 195; 33 42 165; 6 1 140]./255;  %ctrlcols
+spacer = [0 10];
+lme_dist = 'linear';
+        for a = 1:8
+                boxplot(riprates{a},'Positions',a,'Symbol','', 'Width',.2,'Color',animcol(a,:))
+                text(a,spacer(1)+a/spacer(2),sprintf('n=%d trials',length(riprates{a})));
+        end
+xlim([.5 9.5]);
+tmp = [vertcat(labels_rip{:}),vertcat(riprates{:})];
+tbl = table(tmp(:,1),tmp(:,2),tmp(:,3),'VariableNames',{'Cohort','Indiv','Variable'});
+lme_rips = fitglme(tbl,'Variable~Cohort+(1|Indiv)');%
+xlabel(sprintf('LME Cohort fixed effects vsrip,p=%d',lme_rips.Coefficients.pValue(2)));
+ylabel('SWR rate (Hz)');title('Riprate postrw, first 250 trials'); ylim([0 2.5]);
 
 %% plot comb riprate per epoch for all animals
 clearvars -except f animals animcol
@@ -113,11 +147,47 @@ for a = 1:length(animals)
             end
         end
         end
-    end
+end
 
-%% plot numrips, duration, rate per trial at each phase per day; 1 figure per animal
+%% Reviewer figure: plot riprate per trial at each phase per day for control animals
 phases = {'home','rw','postrw','outer'}; %,'lock'
-for a = 1:length(animals)
+for a = 5:length(animals)
+    tde = arrayfun(@(x) x.index,f(a).output{1},'UniformOutput',0);% stack data from all trials
+    newtde = zeros(length(tde),2);
+    newtde(~cellfun(@isempty,tde),:) = vertcat(tde{:});
+    days{a} = unique(newtde(newtde(:,1)>0,1));
+    for d = 1:length(days{a})
+        for p = 1:length(phases)
+        eval(['phasedata = arrayfun(@(x) x.' phases{p},''',f(a).output{1}(newtde(:,1)==days{a}(d)),''UniformOutput'',0);']);% stack data from all trials
+        phasedata = vertcat(phasedata{:});
+        if isempty(phasedata)
+            continue
+        end
+        type = cellfun(@(x) x.type,phasedata);
+        %all types (>=0)
+        ratemean{a}(p,d,1) = nanmean(cellfun(@(x) length(x.size),phasedata(type>=0))./cellfun(@(x) x.duration,phasedata(type>=0)));
+        ratestd{a}(p,d,1) = nanstd(cellfun(@(x) length(x.size),phasedata(type>=0))./cellfun(@(x) x.duration,phasedata(type>=0)));
+        end
+    end
+    figure; set(gcf,'Position',[0 0 900 950])
+    for p = 1:length(phases)
+        if p==1 | p==5
+        subplot(4,1,p); hold on; ylabel(phases{p}); ylim([0 inf])
+        plot(days{a}, ratemean{a}(p,:,1),'Color',animcol(a,:));
+        elseif p==4
+            subplot(4,1,p); hold on;  ylabel([phases{p}]); ylim([0 inf])
+            plot(days{a}, ratemean{a}(p,:,1),'Color',animcol(a,:),'Marker','.'); 
+        else  %p==3
+            subplot(4,1,p); hold on; ylabel([phases{p}]); ylim([0 inf])
+            plot(days{a}, ratemean{a}(p,:,1),'Color',animcol(a,:),'Marker','.'); 
+            lsline
+        end
+    end
+end
+
+%% plot numrips, duration, rate per trial at each phase per day;
+phases = {'home','rw','postrw','outer'}; %,'lock'
+for a = 5:length(animals)
     tde = arrayfun(@(x) x.index,f(a).output{1},'UniformOutput',0);% stack data from all trials
     newtde = zeros(length(tde),2);
     newtde(~cellfun(@isempty,tde),:) = vertcat(tde{:});
@@ -157,21 +227,21 @@ for a = 1:length(animals)
         subplot(4,3,2+3*(p-1)); hold on; title('duration'); ylim([0 inf])
         %errorbar(days{a}, durmean{a}(p,:,1),durstd{a}(p,:,1),'k.')
         plot(days{a}, durmean{a}(p,:,1),'Color',animcol(a,:));
-        subplot(4,3,3+3*(p-1)); hold on; title('riprate'); ylim([0 1])
+        subplot(4,3,3+3*(p-1)); hold on; title('riprate'); ylim([0 2])
         %errorbar(days{a}, ratemean{a}(p,:,1),ratestd{a}(p,:,1),'k.')
         plot(days{a}, ratemean{a}(p,:,1),'Color',animcol(a,:));
         elseif p==4
-            subplot(4,3,1+3*(p-1)); hold on; title('num rips'); ylabel([animals{a} phases{p}]); ylim([0 inf])
+            subplot(4,3,1+3*(p-1)); hold on; title('num rips'); ylabel([phases{p}]); ylim([0 inf])
             %errorbar(days{a}, nummean{a}(p,:,1),numstd{a}(p,:,1),'k.'); errorbar(days{a}, nummean{a}(p,:,2),numstd{a}(p,:,2),'k.')
             plot(days{a}, nummean{a}(p,:,1),'Color',animcol(a,:),'Marker','.'); plot(days{a}, nummean{a}(p,:,2),'Color',animcol(a,:));
             subplot(4,3,2+3*(p-1)); hold on; title('duration'); ylim([0 inf])
             %errorbar(days{a}, durmean{a}(p,:,1),durstd{a}(p,:,1),'k.'); errorbar(days{a}, durmean{a}(p,:,2),durstd{a}(p,:,2),'k.')
             plot(days{a}, durmean{a}(p,:,1),'Color',animcol(a,:),'Marker','.'); plot(days{a}, durmean{a}(p,:,2),'Color',animcol(a,:));
-            subplot(4,3,3+3*(p-1)); hold on; title('riprate'); ylim([0 1])
+            subplot(4,3,3+3*(p-1)); hold on; title('riprate'); ylim([0 2])
             %errorbar(days{a}, ratemean{a}(p,:,1),ratestd{a}(p,:,1),'k.'); errorbar(days{a}, ratemean{a}(p,:,2),ratestd{a}(p,:,2),'k.')
             plot(days{a}, ratemean{a}(p,:,1),'Color',animcol(a,:),'Marker','.'); plot(days{a}, ratemean{a}(p,:,2),'Color',animcol(a,:));
         else 
-            subplot(4,3,1+3*(p-1)); hold on; title('num rips'); ylabel([animals{a} phases{p}]); ylim([0 inf])
+            subplot(4,3,1+3*(p-1)); hold on; title('num rips'); ylabel([phases{p}]); ylim([0 inf])
             %errorbar(days{a}, nummean{a}(p,:,1),numstd{a}(p,:,1),'k.'); errorbar(days{a}, nummean{a}(p,:,2),numstd{a}(p,:,2),'k.')
             plot(days{a}, nummean{a}(p,:,1),'Color',animcol(a,:),'Marker','.'); 
             plot(days{a}, nummean{a}(p,:,2),'Color',animcol(a,:));
@@ -179,7 +249,7 @@ for a = 1:length(animals)
             %errorbar(days{a}, durmean{a}(p,:,1),durstd{a}(p,:,1),'k.'); errorbar(days{a}, durmean{a}(p,:,2),durstd{a}(p,:,2),'k.')
             plot(days{a}, durmean{a}(p,:,1),'Color',animcol(a,:),'Marker','.'); 
             plot(days{a}, durmean{a}(p,:,2),'Color',animcol(a,:));
-            subplot(4,3,3+3*(p-1)); hold on; title('riprate'); ylim([0 1])
+            subplot(4,3,3+3*(p-1)); hold on; title('riprate'); ylim([0 2])
             %errorbar(days{a}, ratemean{a}(p,:,1),ratestd{a}(p,:,1),'k.'); errorbar(days{a}, ratemean{a}(p,:,2),ratestd{a}(p,:,2),'k.')
             plot(days{a}, ratemean{a}(p,:,1),'Color',animcol(a,:),'Marker','.'); 
             plot(days{a}, ratemean{a}(p,:,2),'Color',animcol(a,:));
